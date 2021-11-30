@@ -110,3 +110,9 @@ test: cpu test.py
 clean:
 	rm -f $(TARGETS) $(OBJECT_SRCS) $(OBJECT_SRCS_CUDA)
 
+clean_all:
+	rm -f $(TARGETS) $(OBJECT_SRCS) $(OBJECT_SRCS_CUDA)
+	rm -rf prov/
+	rm -f gpu/*
+	rm -f matrix_1*
+

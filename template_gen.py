@@ -248,7 +248,7 @@ struct MatrixFunctor<Eigen::GpuDevice, T> {\n\
 \n\
 //#include <thrust/complex.h>\n\
 \n\
-#define COMPLEX_TYPE complex128//thrust::complex<double>\n\
+#define COMPLEX_TYPE " + complexType + "//thrust::complex<" + doubleType + ">\n\
 \n\
 #endif"
     tm = Template(tem)
@@ -266,7 +266,7 @@ def define_function(temp, func, device):
             dev = '__device__ ' 
     
     func.argn = len(func.args)
-    if func.args[0].type == 'double*':
+    if func.args[0].type == doubleType + '*':
         func.args[0].type = 'const ' + func.args[0].type
     tem = "\
 {{ func.template }}\n\
@@ -436,7 +436,7 @@ def grab_function_arguments(line, f, f_name, args, signatures, signature_variabl
         split_slices.append(a.slice)
     #for l in split_args:
         #print(l)
-    #    split_types.append('double')
+    #    split_types.append(doubleType)
     #    split_sizes.append(-1)
     """
     while l != '':
@@ -451,7 +451,7 @@ def grab_function_arguments(line, f, f_name, args, signatures, signature_variabl
                 if len(splitted) == 2:
                     new_type = convert_type(splitted[1])
                 else:
-                    new_type = "double"
+                    new_type = doubleType
                 splitted = splitted[0].split("shape=(")
                 splitted[1] = clean_args(splitted[1])
                 size = -1
@@ -480,7 +480,7 @@ def grab_function_arguments(line, f, f_name, args, signatures, signature_variabl
 
 def grab_function_return(line, f, f_name, f_type, args):
     
-    args.append(argument('ret', 'double', -1, False, []))
+    args.append(argument('ret', doubleType, -1, False, []))
     return args, f_type
     
     split_types = []
@@ -655,7 +655,7 @@ def parse_line(line, args, scope_variables, scope, inside_comment):
     line = s[0]
     is_arrayy = ''
     is_array = False
-    variable_type = 'double' # not needed
+    variable_type = doubleType # not needed
     comment = ''
     defined_in_args = False
     defined_in_scope = False
@@ -711,7 +711,7 @@ def parse_line(line, args, scope_variables, scope, inside_comment):
         #print(value)
         square_brackets = 0
         assigned = split_line[2]
-        custom_type = 'double'
+        custom_type = doubleType
         custom_size = -1
         while clean_args(value).startswith('['):
             value = value[1:]
@@ -806,7 +806,7 @@ def parse_line(line, args, scope_variables, scope, inside_comment):
                     if v.type.startswith('T'):
                         custom_type = 'T'
                         break
-                    elif v.type.startswith('double'):
+                    elif v.type.startswith(doubleType):
                         type_value += 1
         if custom_type != 'T':
             for v in args:
@@ -821,7 +821,7 @@ def parse_line(line, args, scope_variables, scope, inside_comment):
                     if v.type.startswith('T'):
                         custom_type = 'T'
                         break
-                    elif v.type.startswith('double'):
+                    elif v.type.startswith(doubleType):
                         type_value += 1
             reassignment = re.search('float_me\(', value)
             if reassignment != None:
@@ -1148,7 +1148,7 @@ def parse_line(line, args, scope_variables, scope, inside_comment):
                             unknown = True
                         if args[i].type.startswith('T'):
                             conc_type = 'T'
-                        elif args[i].type.startswith('double'):
+                        elif args[i].type.startswith(doubleType):
                             type_value += 1
                         conc_size += c_size
                         var_length.append(c_size)
@@ -1165,7 +1165,7 @@ def parse_line(line, args, scope_variables, scope, inside_comment):
                             unknown = True
                         if scope_variables[i].type.startswith('T'):
                             conc_type = 'T'
-                        elif scope_variables[i].type.startswith('double'):
+                        elif scope_variables[i].type.startswith(doubleType):
                             type_value += 1
                         conc_size += c_size
                         var_length.append(c_size)
@@ -1173,7 +1173,7 @@ def parse_line(line, args, scope_variables, scope, inside_comment):
             
             if conc_type != 'T':
                 if type_value > 0:
-                    conc_type = 'double'
+                    conc_type = doubleType
             
             if unknown == False:
                 #print(var_list, conc_size)
@@ -1216,7 +1216,7 @@ def parse_line(line, args, scope_variables, scope, inside_comment):
             value = re.sub(', *dtype.*', '', value)
             value = re.sub('tf.constant\(', '', value)
             sp = clean_args(value).split(',')
-            custom_type = 'double'
+            custom_type = doubleType
             
             custom_size = len(sp)
             is_array = True
@@ -1310,7 +1310,7 @@ def parse_line(line, args, scope_variables, scope, inside_comment):
             
             value = convert_grammar(value)
             
-            custom_type = 'double'
+            custom_type = doubleType
             scope.append(custom_type + ' ' + assigned_variable + ' = 0;')
             #scope.append(custom_type + ' ' + assigned_variable + ' = T(0,0);')
             spacing = ''
@@ -1480,7 +1480,7 @@ def convert_type(t):
     
     result = ""
     d = {
-        'DTYPE': 'double',
+        'DTYPE': doubleType,
         'DTYPEINT': 'int',
         'DTYPECOMPLEX': 'T',
     }
@@ -1517,6 +1517,8 @@ def convert_grammar(value):
     value = re.sub('complex_me', 'T', value)
     value = re.sub('complex\(', 'T(', value)
     value = re.sub('\( *\(([a-zA-Z_0-9()[\]{}+\-*/ \n]*)\) *\)', '(\g<1>)', value)
+    #value = re.sub('([ ,;+*\-/()[\]{}\n]+[0-9]+\.[0-9]*)([ ,;+*\-/()[\]{}\n]+)', '\g<1>f\g<2>', value)
+    #value = re.sub('([ ,;+*\-/()[\]{}\n]+[0-9]+\.[0-9]*)([ ,;+*\-/()[\]{}\n]+)', '\g<1>f\g<2>', value)
     return value
 
 def check_variables(counter, function_list):
@@ -1640,11 +1642,11 @@ def check_lines(counter, function_list):
                             if v.type.startswith('T'):
                                 custom_type = 'T'
                                 break
-                            elif v.type.startswith('double'):
+                            elif v.type.startswith(doubleType):
                                 type_value += 1
                     
                     if custom_type != 'T' and type_value > 0:
-                        custom_type = 'double'
+                        custom_type = doubleType
                     
                     function_list[counter].args[-1].type = custom_type + '&'
                     function_list[counter].args[-1].size = 0
@@ -1671,7 +1673,7 @@ def check_lines(counter, function_list):
                                     #print(ls, v.name)
                                     function_list[counter].scope[it] = ''
                                     break
-                        elif v.type.startswith('double'):
+                        elif v.type.startswith(doubleType):
                             match = re.search('T\( *' + v.name +'[0-9[\]]* *\)', value)
                             if match != None:
                                 #print(match)
@@ -1696,7 +1698,7 @@ def check_lines(counter, function_list):
                     if match != None:
                         if f.type == 'void':
                             #print(line, f.name, f.type, f.args[-1].type, f.args[-1].size)
-                            if ls[0].startswith('T') or ls[0].startswith('double') or ls[0].startswith('int'):
+                            if ls[0].startswith('T') or ls[0].startswith(doubleType) or ls[0].startswith('int'):
                                 #print(ls[0], f.args[-1].type, f.args[-1].size)
                                 for v in range(len(function_list[counter].scope_args)):
                                     if l[0].endswith(' ' + function_list[counter].scope_args[v].name):
@@ -1748,7 +1750,7 @@ def check_lines(counter, function_list):
                             unknown = True
                         if function_list[counter].args[i].type.startswith('T'):
                             conc_type = 'T'
-                        elif function_list[counter].args[i].type.startswith('double'):
+                        elif function_list[counter].args[i].type.startswith(doubleType):
                             type_value += 1
                         conc_size += c_size
                         var_length.append(c_size)
@@ -1765,7 +1767,7 @@ def check_lines(counter, function_list):
                             unknown = True
                         if function_list[counter].scope_args[i].type.startswith('T'):
                             conc_type = 'T'
-                        elif function_list[counter].scope_args[i].type.startswith('double'):
+                        elif function_list[counter].scope_args[i].type.startswith(doubleType):
                             type_value += 1
                         conc_size += c_size
                         var_length.append(c_size)
@@ -1773,7 +1775,7 @@ def check_lines(counter, function_list):
             
             if conc_type != 'T':
                 if type_value > 0:
-                    conc_type = 'double'
+                    conc_type = doubleType
             
             if unknown == False:
                 #print(var_list, conc_size)
@@ -1899,7 +1901,7 @@ def prepare_custom_op(f, nevents):
                 for j in range(len(f.scope)):
                     f.scope[j] = re.sub('([()[\]{} ,+\-*/]*)' + f.args[i].name + '([()[\]{} ,+\-*/]*)', '\g<1>' + f.args[i].name + '[0]' + '\g<2>', f.scope[j])
     
-    f.args[-1].type = 'double*'
+    f.args[-1].type = doubleType+'*'
     
     for j in range(len(f.scope)):
         f.scope[j] = re.sub('([()[\]{} ,+\-*/]*)' + f.args[-1].name + '([()[\]{} ,+\-*/]*)', '\g<1>' + f.args[-1].name + '[it]' + '\g<2>', f.scope[j])
@@ -2101,6 +2103,11 @@ def modify_matrix(infile, temp, process_name):
     #print(new_matrix)
     return temp
 
+
+doubleType = 'double'
+complexType = 'complex128'
+
+
 libraries = ["iostream",
              "math.h",
              "unsupported/Eigen/CXX11/Tensor"]
@@ -2112,8 +2119,8 @@ headers_ = ["tensorflow/core/framework/op.h",
            "tensorflow/cc/ops/math_ops.h"]
            
 namespace = "tensorflow"
-constants = ["double SQH = 0.70710676908493",
-             "complex128 CZERO = complex128(0.0, 0.0)"]
+constants = [doubleType + " SQH = 0.70710676908493",
+             "COMPLEX_TYPE CZERO = COMPLEX_TYPE(0.0, 0.0)"]
 cpuConstants = ["using thread::ThreadPool"]
 defined = ["COMPLEX_CONJUGATE std::conj",
            "MAXIMUM std::max",
@@ -2127,6 +2134,7 @@ defined = ["COMPLEX_CONJUGATE std::conj",
 
 folder_name = 'prov/'
 folder_path = ''#'/home/gabriele/Scrivania/'
+
 
 process = 'p p > t t~'
 process_name = re.sub(' *', '', process)
@@ -2146,7 +2154,7 @@ temp = ""
 if __name__ == "__main__":
     
     
-    file_sources = ['/home/palazzo/madflow/python_package/madflow/wavefunctions_flow.py']
+    file_sources = ['/home/gabriele/Scaricati/madflow/python_package/madflow/wavefunctions_flow.py']
     
     
     subprocess.check_output(["/bin/sh", "-c", "rm -f matrix_1_*"])
@@ -2157,21 +2165,21 @@ if __name__ == "__main__":
     
     aux_args = []
     auxiliary_functions = []
-    aux_arg = argument('x', 'double', 0, False, [])
+    aux_arg = argument('x', doubleType, 0, False, [])
     aux_args.append(aux_arg)
-    aux_arg = argument('y', 'double', 0, False, [])
+    aux_arg = argument('y', doubleType, 0, False, [])
     aux_args.append(aux_arg)
     aux_scope = ['int sign = 0;',
                  'y >= 0 ? sign = 1 : sign = -1;',
                  'return x * sign;']
     aux_scope_args = [argument('sign', 'int', 0, False, [])]
-    aux_function = function('double', 'sign', aux_args, aux_scope, aux_scope_args, '')
+    aux_function = function(doubleType, 'sign', aux_args, aux_scope, aux_scope_args, '')
     function_list_.append(aux_function)
     auxiliary_functions.append(aux_function)
     
     aux_scope = ['return sign(x, y);']
     aux_scope_args = []
-    aux_function = function('double', 'signvec', aux_args, aux_scope, aux_scope_args, '')
+    aux_function = function(doubleType, 'signvec', aux_args, aux_scope, aux_scope_args, '')
     function_list_.append(aux_function)
     auxiliary_functions.append(aux_function)
     
@@ -2338,7 +2346,7 @@ __device__ COMPLEX_TYPE operator*(const COMPLEX_TYPE& a, const COMPLEX_TYPE& b) 
 }\n\
 \n\
 __device__ COMPLEX_TYPE operator/(const COMPLEX_TYPE& a, const COMPLEX_TYPE& b) {\n\
-    double norm = b.real() * b.real() + b.imag() * b.imag();\n\
+    " + doubleType + " norm = b.real() * b.real() + b.imag() * b.imag();\n\
     return COMPLEX_TYPE((a.real() * b.real() + a.imag() * b.imag())/norm, (a.imag() * b.real() - a.real() * b.imag())/norm);\n\
 }\n\
 \n\
@@ -2346,15 +2354,15 @@ __device__ COMPLEX_TYPE operator-(const COMPLEX_TYPE& a) {\n\
     return COMPLEX_TYPE(-a.real(), -a.imag());\n\
 }\n\
 \n\
-__device__ COMPLEX_TYPE operator*(const COMPLEX_TYPE& a, const double& b) {\n\
+__device__ COMPLEX_TYPE operator*(const COMPLEX_TYPE& a, const " + doubleType + "& b) {\n\
     return COMPLEX_TYPE(a.real() * b, a.imag() * b);\n\
 }\n\
 \n\
-__device__ COMPLEX_TYPE operator*(const double& a, const COMPLEX_TYPE& b) {\n\
+__device__ COMPLEX_TYPE operator*(const " + doubleType + "& a, const COMPLEX_TYPE& b) {\n\
     return b * a;\n\
 }\n\
 \n\
-__device__ COMPLEX_TYPE operator/(const COMPLEX_TYPE& a, const double& b) {\n\
+__device__ COMPLEX_TYPE operator/(const COMPLEX_TYPE& a, const " + doubleType + "& b) {\n\
     return COMPLEX_TYPE(a.real() / b, a.imag() / b);\n\
 }\n"
         

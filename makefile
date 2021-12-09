@@ -49,9 +49,9 @@ TARGET_LIB=matrix.so
 OBJECT_SRCS = $(CSRCS:.cc=.o)
 OBJECT_SRCS_CUDA = $(GSRCS:.cc=.cudao)
 
-CFLAGS = ${TF_CFLAGS} ${OMP_CFLAGS} -fPIC -O2 -std=c++11
+CFLAGS = ${TF_CFLAGS} ${OMP_CFLAGS} -fPIC -O2 -std=c++14
 CFLAGS_CUDA = $(CFLAGS) -D GOOGLE_CUDA=1 -I$(CUDA_PATH)/include
-CFLAGS_NVCC = ${TF_CFLAGS} -O2 -std=c++11 -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC -DNDEBUG --expt-relaxed-constexpr
+CFLAGS_NVCC = ${TF_CFLAGS} -O2 -std=c++14 -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC -DNDEBUG --expt-relaxed-constexpr
 
 LDFLAGS = -shared ${TF_LFLAGS}
 LDFLAGS_CUDA = $(LDFLAGS) -L$(CUDA_PATH)/lib64 -lcudart

@@ -3,6 +3,8 @@ from jinja2 import Template
 import subprocess
 import re
 
+INT64Type = 'int64_t'
+
 def write_libraries(temp, libs):
     tem = "{% for lib in libraries %}\
 "            "#include <{{ lib }}>\n\
@@ -1220,14 +1222,20 @@ def parse_line(line, args, scope_variables, scope, inside_comment):
             
             custom_size = len(sp)
             is_array = True
-                
-            scope.append(custom_type + ' ' + assigned_variable + '[' + str(len(sp)) + '];')
+            newLine = 'const ' + custom_type + ' ' + assigned_variable + '[] = {'
+            #newLine = 'const T ' + assigned_variable + '[] = {'
+            #scope.append(custom_type + ' ' + assigned_variable + '[' + str(len(sp)) + '];')
             #print(custom_type + ' ' + assigned_variable + '[' + str(len(sp)) + '];')
             
-            for v in range(len(sp)):
-                scope.append(assigned_variable + '[' + str(v) + '] = ' + sp[v] + ';')
+            for v in range(len(sp) - 1):
+                newLine += sp[v] + ','
+                #newLine += 'T('+sp[v] + ',0),'
+                #scope.append(assigned_variable + '[' + str(v) + '] = ' + sp[v] + ';')
                 #print(assigned_variable + '[' + str(v) + '] = ' + sp[v] + ';')
+            newLine += sp[-1] + '};'
+            #newLine += 'T('+sp[-1] + ',0)};'
             
+            scope.append(newLine)
             value = ''
             #print(clean_args(value))
         elif value.startswith(st10):
@@ -1846,11 +1854,11 @@ def parallelize_function(f):
             s += 1
             f.scope.insert(s, 'const int ncores = (int)thread_pool->NumThreads();')
             s += 1
-            f.scope.insert(s, 'int64 nreps;')
+            f.scope.insert(s, INT64Type + ' nreps;')
             s += 1
             f.scope.insert(s, 'if (ncores > 1) {')
             s += 1
-            f.scope.insert(s, '    nreps = (int64)nevents / ncores;')
+            f.scope.insert(s, '    nreps = (' + INT64Type + ')nevents / ncores;')
             s += 1
             f.scope.insert(s, '} else {')
             s += 1
@@ -1860,7 +1868,7 @@ def parallelize_function(f):
             s += 1
             f.scope.insert(s, 'const ThreadPool::SchedulingParams p(ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, nreps);')
             s += 1
-            f.scope.insert(s, 'auto DoWork = [&](int64 t, int64 w) {')
+            f.scope.insert(s, 'auto DoWork = [&](' + INT64Type + ' t, ' + INT64Type + ' w) {')
             s += 1
             f.scope.insert(s, 'for (auto it = t; it < w; it += 1) {')
             s += 1
@@ -2103,6 +2111,19 @@ def modify_matrix(infile, temp, process_name):
     #print(new_matrix)
     return temp
 
+def extract_constants(func, constants):
+    
+    count = 0
+    for i in range(len(func.scope)):
+        if func.scope[i].startswith('const double '):
+            constants.append(re.sub('const ', '', func.scope[i]))
+            del func.scope[i]
+            i -= 1
+            count += 1
+        if count == 2:
+            break
+    
+    return func, constants
 
 doubleType = 'double'
 complexType = 'complex128'
@@ -2259,6 +2280,9 @@ if __name__ == "__main__":
         
         custom_op_list = define_custom_op(custom_op_list, function_list[-1])
         
+        function_list[-1], constants = extract_constants(function_list[-1], constants)
+        
+        
         temp = ""
         temp = write_headers(temp, headers)
         temp = write_namespace(temp, namespace)
@@ -2320,10 +2344,55 @@ if __name__ == "__main__":
                 del function_list[-1].scope[i]
                 break
             i += 1
+        
+        """
+        i = 0
+        while i < len(function_list[-1].scope):
+            if function_list[-1].scope[i].startswith('const double denom'):
+                vals = (function_list[-1].scope[i].split('=')[1])[2:-2].split(',')
+                #print(vals)
+                function_list[-1].scope[i] = '__shared__ double denom[' + str(len(vals)) + '];'
+                for j in range(len(vals)):
+                    function_list[-1].scope.insert(i + j + 1, 'denom[' + str(j) + '] = ' + str(vals[j]) + ';')
+                break
+            i += 1
+        """
+        """
+        i = 0
+        while i < len(function_list[-1].scope):
+            if function_list[-1].scope[i].startswith('const double cf'):
+                vals = (function_list[-1].scope[i].split('=')[1])[2:-2].split(',')
+                #print(vals)
+                function_list[-1].scope[i] = '__shared__ double cf[' + str(len(vals)) + '];'
+                for j in range(len(vals)):
+                    function_list[-1].scope.insert(i + j + 1, 'cf[' + str(j) + '] = ' + str(vals[j]) + ';')
+                break
+            i += 1
+        """
         """
         for i in range(len(function_list[-1].scope)):
             if function_list[-1].scope[i].startswith('for (int it'):
                 function_list[-1].scope[i] = 'for (int it = blockIdx.x * blockDim.x + threadIdx.x; it < ' + function_list[-1].args[-1].name + '; it += blockDim.x * gridDim.x) {'
+        """
+        """
+        i = 0
+        while i < len(function_list[-1].scope):
+            
+            #function_list[-1].scope[i] = re.sub('(T amp[0-9]*);', '\g<1> = (T)malloc(sizeof(T));', function_list[-1].scope[i])
+            function_list[-1].scope[i] = re.sub('T (w[0-9]*)\[([0-9]*)];', 'T* \g<1> = (T*)malloc(sizeof(T) * \g<2>);', function_list[-1].scope[i])
+            
+            if function_list[-1].scope[i].startswith('    T jamp[]'):
+                for j in range(121):
+                    function_list[-1].scope.insert(i, '    free(w' + str(j) + ');')
+                    i += 1
+                
+                for j in range(1890):
+                    function_list[-1].scope.insert(i + 1, '    free(amp' + str(j) + ');')
+                    i += 1
+                
+                break
+            
+            i += 1
         """
         for f in function_list:
             temp = define_function(temp, f, 'gpu')

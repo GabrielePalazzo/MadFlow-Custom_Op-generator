@@ -2116,14 +2116,31 @@ def extract_constants(func, constants):
     count = 0
     for i in range(len(func.scope)):
         if func.scope[i].startswith('const double '):
-            constants.append(re.sub('const ', '', func.scope[i]))
+            constants.append(change_array_into_variable(func.scope[i]))
+            #constants.append(re.sub('const ', '', func.scope[i]))
             del func.scope[i]
             i -= 1
             count += 1
         if count == 2:
             break
     
+    for i in range(len(func.scope)):
+        match = re.search('denom', func.scope[len(func.scope) - i - 1])
+        if match != None:
+            func.scope[len(func.scope) - i - 1] = re.sub('denom\[[a-zA-Z0-9+\-*/_]\]', 'denom', func.scope[len(func.scope) - i - 1])
+            break
+    
     return func, constants
+    
+def change_array_into_variable(line):
+    match = re.search('denom', line)
+    if match != None:
+        line = re.sub('\[\]', '', line)
+        line = re.sub('{([+\-0-9]+).*;', '\g<1>', line)
+        return line
+    else:
+        line = re.sub(';', '', line)
+        return line
 
 doubleType = 'double'
 complexType = 'complex128'
@@ -2140,8 +2157,8 @@ headers_ = ["tensorflow/core/framework/op.h",
            "tensorflow/cc/ops/math_ops.h"]
            
 namespace = "tensorflow"
-constants = [doubleType + " SQH = 0.70710676908493",
-             "COMPLEX_TYPE CZERO = COMPLEX_TYPE(0.0, 0.0)"]
+globalConstants = ["const " + doubleType + " SQH = 0.70710676908493",
+             "const COMPLEX_TYPE CZERO = COMPLEX_TYPE(0.0, 0.0)"]
 cpuConstants = ["using thread::ThreadPool"]
 defined = ["COMPLEX_CONJUGATE std::conj",
            "MAXIMUM std::max",
@@ -2228,6 +2245,12 @@ if __name__ == "__main__":
     #print(files_list)
     
     for _file_ in files_list:
+        
+        
+        constants = []#globalConstants
+        
+        for e in globalConstants:
+            constants.append(e)
         
         process_name = re.sub('matrix_1_', '', _file_)
         process_name = re.sub('\.py', '', process_name)

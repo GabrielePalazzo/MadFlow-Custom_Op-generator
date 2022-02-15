@@ -2084,7 +2084,7 @@ def define_custom_op(custom_op_list, func):
     custom_op_list.append(c_op)
     return custom_op_list
 
-def modify_matrix(infile, temp, process_name):
+def modify_matrix(infile, temp, process_name, destination):
     f = open(infile, 'r')
     line = f.readline()
     new_matrix = ""
@@ -2098,7 +2098,7 @@ def modify_matrix(infile, temp, process_name):
             #print(line)
             if clean_args(line).startswith('for'):
                 space = line.split('for')[0]
-                new_matrix += space + 'matrixOp = tf.load_op_library(\'./matrix_' + process_name + '_cu.so\')\n'
+                new_matrix += space + 'matrixOp = tf.load_op_library(\'' + destination + './matrix_' + process_name + '_cu.so\')\n'
             new_matrix += line
             if clean_args(line).startswith('return'):
                 inside_matrix = False
@@ -2487,7 +2487,7 @@ __device__ COMPLEX_TYPE operator/(const COMPLEX_TYPE& a, const " + doubleType + 
             fh.write(temp)
         
         temp = ""
-        temp = modify_matrix(matrix_source, temp, process_name)
+        temp = modify_matrix(matrix_source, temp, process_name, destination)
         #print(temp)
         with open(matrix_name, "w") as fh:
             fh.write(temp)
@@ -2496,8 +2496,8 @@ __device__ COMPLEX_TYPE operator/(const COMPLEX_TYPE& a, const " + doubleType + 
         #--------------------------------------------------------------------------------------
       
 
-def compile():
-    subprocess.check_output(["/bin/sh", "-c", "make"])
+def compile(destination):
+    subprocess.check_output(["/bin/sh", "-c", "cd " + destination + "; make"])
 
 if __name__ == "__main__":
     translate(folder_name)

@@ -49,8 +49,6 @@ from pdfflow import mkPDF
 
 import tensorflow as tf
 
-import psutil, os
-
 DEFAULT_PDF = "NNPDF31_nnlo_as_0118"
 logger = logging.getLogger(__name__)
 
@@ -58,24 +56,6 @@ logger = logging.getLogger(__name__)
 # must be changed accordingly, it can be made into options later on
 _flav_dict = {"g": 21, "d": 1, "u": 2, "s": 3, "c": 4, "b": 5, "t": 6}
 
-
-def areclose(t1, t2):
-    dist = tf.fill(tf.shape(t1), float_me(0.000001))
-    #dist = tf.fill(tf.shape(t1), float_me(0.002))
-    
-    # Check if the real parts are close
-    
-    result = tf.math.less_equal(tf.math.abs(tf.math.real(t1 - t2)), dist)
-    #tf.print(t1-t2, t1, t2)
-    #tf.print(tf.math.equal(result, True))
-    tf.debugging.assert_equal(result, True)
-    
-    # Check if the imaginary parts are close
-    
-    result = tf.math.less_equal(tf.math.abs(tf.math.imag(t1 - t2)), dist)
-    
-    #tf.print(tf.math.equal(result, True))
-    tf.debugging.assert_equal(result, True)
 
 def _read_flav(flav_str):
     particle = _flav_dict.get(flav_str[0])
@@ -138,6 +118,7 @@ def _import_matrices(output_folder):
     re_name = re.compile(r"\w{3,}")
     matrices = []
     models = []
+    #for i, matrix_file in enumerate(output_folder.glob("matrix_*.py")):
     for i, matrix_file in enumerate(this_folder.glob("matrix_*.py")):
         matrix_name = re_name.findall(matrix_file.name)[0]
         matrix_module = _import_module_from_path(matrix_file, matrix_name)
@@ -298,6 +279,11 @@ def madflow_main(args=None, quick_return=False):
         type=int,
         default=int(1e6),
     )
+    arger.add_argument(
+        "--custom_op",
+        help="Use a Custom Operator for ME evaluation",
+        action="store_true"
+    )
 
     args = arger.parse_args(args)
 
@@ -306,7 +292,7 @@ def madflow_main(args=None, quick_return=False):
 
     # LheWriter needs to be imported after --autolink
     from madflow.lhe_writer import LheWriter
-
+    
     if args.output is None:
         output_path = Path(tempfile.mkdtemp(prefix="mad_"))
     else:
@@ -388,7 +374,11 @@ def madflow_main(args=None, quick_return=False):
     test_ps, test_wt, _, _, _ = phasespace(test_xrand)
     test_alpha = float_me([0.118] * len(test_wt))
     for matrix, model in zip(matrices, models):
-        wgts = matrix.smatrix(test_ps, *model.evaluate(test_alpha))
+        if args.custom_op:
+            wgts = matrix.cusmatrix(test_ps, *model.evaluate(test_alpha))
+        else:
+            wgts = matrix.smatrix(test_ps, *model.evaluate(test_alpha))
+        
         logger.info("Testing %s: %s", matrix, wgts.numpy())
 
     @tf.function(input_signature=3 * [tf.TensorSpec(shape=[None], dtype=DTYPE)])
@@ -426,22 +416,11 @@ def madflow_main(args=None, quick_return=False):
             # Compute each matrix element
             ret = 0.0
             for i, (matrix, model) in enumerate(zip(matrices, models)):
-                
-                smatrix = matrix.smatrix(all_ps, *model.evaluate(alpha_s))
-                #csmatrix = matrix.csmatrix(all_ps, *model.evaluate(alpha_s))
-                #tf.print(all_ps, smatrix, csmatrix)
-                
-                #tf.where(tf.math.less_equal(smatrix - csmatrix, tf.fill(tf.shape(smatrix), float_me(0.0001))), tf.print(''), tf.print(smatrix, csmatrix))
-                #for i in range(100):
-                #    print(smatrix[i])
-                #areclose(smatrix, csmatrix)
-                """
-                dist = tf.fill(tf.shape(smatrix), float_me(0.0000001))
-                res = tf.math.less_equal(tf.math.abs(smatrix - csmatrix), dist)
-                print(all(tf.equal(res, True)))
-                #tf.where(res, print('y'), tf.print(smatrix, csmatrix))
-                #print(smatrix, csmatrix)
-                """
+                if args.custom_op:
+                    smatrix = matrix.cusmatrix(all_ps, *model.evaluate(alpha_s))
+                else:
+                    smatrix = matrix.smatrix(all_ps, *model.evaluate(alpha_s))
+                #smatrix = matrix.smatrix(all_ps, *model.evaluate(alpha_s))
                 if not args.no_pdf:
                     p1 = tf.gather(proton_1, gather_1[i], axis=1)
                     p2 = tf.gather(proton_2, gather_2[i], axis=1)
@@ -505,7 +484,6 @@ def madflow_main(args=None, quick_return=False):
     )
 
     if args.histograms:
-        print('Here')
         proc_name = args.madgraph_process.replace(" ", "_").replace(">", "to").replace("~", "b")
         with LheWriter(output_path, proc_name, False, 0) as lhe_writer:
             integrand = generate_integrand(lhe_writer)
@@ -532,6 +510,4 @@ def main():
 
 
 if __name__ == "__main__":
-    process = psutil.Process(os.getpid())
     main()
-    tf.print("Memory usage:", process.memory_info().rss)

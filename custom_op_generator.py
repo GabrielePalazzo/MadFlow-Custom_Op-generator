@@ -2168,26 +2168,16 @@ defined = ["COMPLEX_CONJUGATE std::conj",
            "CPUDevice Eigen::ThreadPoolDevice",
            "GPUDevice Eigen::GpuDevice",
            "DEFAULT_BLOCK_SIZE 32"]
-             
-#file_source = '/home/gabriele/Scaricati/madflow/python_package/madflow/wavefunctions_flow.py'
-#file_source = '/home/gabriele/Scrivania/madflow-ggttbar-customop-main/aloha_1_gg_ttx.py'
 
 folder_name = 'prov/'
-folder_path = ''#'/home/gabriele/Scrivania/'
+folder_path = ''
 
 
 process = 'p p > t t~'
 process_name = re.sub(' *', '', process)
 process_name = re.sub('>', '_', process_name)
 process_name = re.sub('~', 'x', process_name)
-"""
-file_sources = ['/home/gabriele/Scaricati/madflow/python_package/madflow/wavefunctions_flow.py', # functions defined inside madflow package
-                folder_path + '/' + folder_name + '/aloha_1_' + process_name + '.py']#'/home/gabriele/Scaricati/madflow-ggttbar-customop/aloha_1_gg_ttx.py'] # functions process dependent
 
-matrix_source = folder_path + '/' + folder_name + '/' + 'matrix_1_' + process_name + '.py'
-
-matrix_name = 'matrix_1_' + process_name + '.py'
-"""
 temp = ""
 #msg = ""
 

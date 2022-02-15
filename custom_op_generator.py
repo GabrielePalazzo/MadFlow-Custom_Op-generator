@@ -3,6 +3,8 @@ from jinja2 import Template
 import subprocess
 import re
 
+import madflow.wavefunctions_flow
+
 INT64Type = 'int64_t'
 
 def write_libraries(temp, libs):
@@ -2189,10 +2191,11 @@ matrix_name = 'matrix_1_' + process_name + '.py'
 temp = ""
 #msg = ""
 
-if __name__ == "__main__":
+def translate(destination):
     
-    
-    file_sources = ['/home/gabriele/Scaricati/madflow/python_package/madflow/wavefunctions_flow.py']
+    if destination[-1] != '/':
+        destination += '/'
+    file_sources = [madflow.wavefunctions_flow.__file__]
     
     
     subprocess.check_output(["/bin/sh", "-c", "rm -f matrix_1_*"])
@@ -2492,3 +2495,9 @@ __device__ COMPLEX_TYPE operator/(const COMPLEX_TYPE& a, const " + doubleType + 
         
         #--------------------------------------------------------------------------------------
       
+
+def compile():
+    subprocess.check_output(["/bin/sh", "-c", "make"])
+
+if __name__ == "__main__":
+    translate(folder_name)

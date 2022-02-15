@@ -2248,7 +2248,7 @@ def translate(destination):
     
         function_list_ = read_file_from_source(function_list_, file_source, signatures_, signature_variables_)
     
-    files_list = subprocess.check_output(["/bin/sh", "-c", "ls " + folder_path + folder_name + ' | grep matrix_1_']).decode('utf-8').split('\n')[:-1]
+    files_list = subprocess.check_output(["/bin/sh", "-c", "ls " + folder_path + destination + ' | grep matrix_1_']).decode('utf-8').split('\n')[:-1]
     #print(files_list)
     
     for _file_ in files_list:
@@ -2262,8 +2262,8 @@ def translate(destination):
         process_name = re.sub('matrix_1_', '', _file_)
         process_name = re.sub('\.py', '', process_name)
         
-        matrix_source = folder_path + folder_name + 'matrix_1_' + process_name + '.py'
-        process_source = folder_path + folder_name + 'aloha_1_' + process_name + '.py'
+        matrix_source = folder_path + destination + 'matrix_1_' + process_name + '.py'
+        process_source = folder_path + destination + 'aloha_1_' + process_name + '.py'
         
         _file_ = process_source
         
@@ -2337,7 +2337,7 @@ def translate(destination):
             
         #print("Writing to " + "gpu/matrix_" + process_name + ".cc")
         #print(temp)
-        with open("gpu/matrix_" + process_name + ".cc", "w") as fh:
+        with open(destination + "gpu/matrix_" + process_name + ".cc", "w") as fh:
             fh.write(temp)
         
         #for i in range(len(defined)):
@@ -2481,19 +2481,19 @@ __device__ COMPLEX_TYPE operator/(const COMPLEX_TYPE& a, const " + doubleType + 
         temp += "\n#endif\n"
         
         #print(temp)
-        with open("gpu/matrix_" + process_name + ".cu.cc", "w") as fh:
+        with open(destination + "gpu/matrix_" + process_name + ".cu.cc", "w") as fh:
             fh.write(temp)
         
         temp = ""
         temp = write_header_file(temp, c, function_list[-1])
         #print(temp)
-        with open("gpu/matrix_" + process_name + ".h", "w") as fh:
+        with open(destination + "gpu/matrix_" + process_name + ".h", "w") as fh:
             fh.write(temp)
         
         temp = ""
         temp = modify_matrix(matrix_source, temp, process_name, destination)
         #print(temp)
-        with open(matrix_name, "w") as fh:
+        with open(destination + matrix_name, "w") as fh:
             fh.write(temp)
             
         

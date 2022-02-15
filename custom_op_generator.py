@@ -2197,9 +2197,13 @@ def translate(destination):
         destination += '/'
     file_sources = [madflow.wavefunctions_flow.__file__]
     
+    madflowLocation = madflow.__file__
+    madflowLocation = re.sub('__init__.*', '', madflowLocation)
     
-    subprocess.check_output(["/bin/sh", "-c", "rm -f matrix_1_*"])
-    subprocess.check_output(["/bin/sh", "-c", "rm -f gpu/*"])
+    #subprocess.check_output(["/bin/sh", "-c", "rm -f matrix_1_*"])
+    #subprocess.check_output(["/bin/sh", "-c", "rm -f gpu/*"])
+    subprocess.check_output(["/bin/sh", "-c", "mkdir " + destination + "gpu/"])
+    subprocess.check_output(["/bin/sh", "-c", "cp " + madflowLocation + "makefile " + destination + "."])
     
     function_list_ = []
     #custom_op_list = []
